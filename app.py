@@ -1,8 +1,9 @@
+import os
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
-import datetime
+from transformers import pipeline, AutoTokenizer
 
 app = FastAPI()
 
@@ -15,12 +16,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Template Engine Setup (looks in templates/ folder)
+templates = Jinja2Templates(directory="templates")
+
 # Initialize Model
 print("⏳ Loading Ira AI Core Engine...")
 model_id = 'Qwen/Qwen1.5-0.5B-Chat'
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 ai_pipeline = pipeline('text-generation', model=model_id, tokenizer=tokenizer)
 print("✅ Ira AI Engine Active!")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    """HTML frontend serve karne ke liye root route"""
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/api/chat")
 async def chat_endpoint(data: dict):
@@ -52,3 +61,7 @@ async def chat_endpoint(data: dict):
         "status": "success",
         "response": response_text
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
