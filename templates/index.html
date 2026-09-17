@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ira AI Assistant</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar for Custom Rules */
+        .sidebar {
+            width: 320px;
+            background-color: #1e293b;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-right: 1px solid #334155;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: #38bdf8;
+        }
+
+        .sidebar label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .sidebar textarea {
+            width: 100%;
+            height: 150px;
+            background-color: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9rem;
+            resize: vertical;
+            outline: none;
+        }
+
+        .sidebar textarea:focus {
+            border-color: #38bdf8;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #0f172a;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #f8fafc;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: #0284c7;
+            color: #ffffff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background-color: #334155;
+            color: #f8fafc;
+            border-bottom-left-radius: 2px;
+        }
+
+        .system-error {
+            align-self: center;
+            background-color: #7f1d1d;
+            color: #fca5a5;
+            font-size: 0.85rem;
+        }
+
+        /* Input Form */
+        .input-container {
+            padding: 20px;
+            background-color: #1e293b;
+            border-top: 1px solid #334155;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+            background-color: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .input-container input:focus {
+            border-color: #38bdf8;
+        }
+
+        .input-container button {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .input-container button:hover {
+            background-color: #0369a1;
+        }
+
+        .input-container button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar for System Rules -->
+    <div class="sidebar">
+        <h2>🤖 Ira AI Settings</h2>
+        <div>
+            <label for="customRules">Custom System Rules:</label>
+            <textarea id="customRules" placeholder="E.g., You are a pirate AI...">You are a helpful AI assistant.</textarea>
+        </div>
+    </div>
+
+    <!-- Main Chat UI -->
+    <div class="chat-container">
+        <div class="chat-header">Ira AI Core Engine Chat</div>
+        <div class="chat-box" id="chatBox">
+            <div class="message bot-message">Hello! Main Ira AI hoon. Aapki kya madad kar sakta hoon?</div>
+        </div>
+
+        <form class="input-container" id="chatForm">
+            <input type="text" id="userInput" placeholder="Apna message yahan likhein..." autocomplete="off" required>
+            <button type="submit" id="sendBtn">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const customRules = document.getElementById('customRules');
+        const chatBox = document.getElementById('chatBox');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function appendMessage(text, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', className);
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return messageDiv;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = userInput.value.trim();
+            const rules = customRules.value.trim() || "You are a helpful AI assistant.";
+
+            if (!message) return;
+
+            // 1. Append user message
+            appendMessage(message, 'user-message');
+            userInput.value = '';
+            
+            // Disable UI while waiting
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+
+            // 2. Append temporary bot loader
+            const loadingDiv = appendMessage('Ira AI soch raha hai...', 'bot-message');
+
+            try {
+                // 3. Request API
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        custom_rules: rules
+                    })
+                });
+
+                const data = await response.json();
+
+                // 4. Handle response
+                if (response.ok && data.status === "success") {
+                    loadingDiv.textContent = data.response;
+                } else {
+                    loadingDiv.textContent = "Error: " + (data.error || "Failed to fetch response.");
+                    loadingDiv.classList.add('system-error');
+                }
+
+            } catch (error) {
+                loadingDiv.textContent = "Server connect nahi ho saka. Server chal raha hai?";
+                loadingDiv.classList.add('system-error');
+            } finally {
+                // Re-enable UI
+                userInput.disabled = false;
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>
