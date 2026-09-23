@@ -4,10 +4,10 @@ from transformers import pipeline
 
 app = Flask(__name__)
 
-print("Loading Qwen1.5 0.5B Chat Model...")
+print("Loading Google Gemma 2B Instruction Model...")
 pipe = pipeline( 
     "text-generation",
-    model="Qwen/Qwen1.5-0.5B-Chat",
+    model="google/gemma-2b-it",
     torch_dtype=torch.float32,
     device_map="auto"
 )
@@ -25,8 +25,8 @@ def generate():
     if not user_prompt:
         return jsonify({"response": "Please enter a message."}), 400
 
-    messages = [
-        {"role": "system", "content": """You are "Lyramoon", an intelligent AI assistant created by MUHAMMAD TAQI.
+    # Gemma system role natively support nahi karta, isliye system instructions user prompt me combine kiye gaye hain
+    system_instruction = """You are "Lyramoon", an intelligent AI assistant created by MUHAMMAD TAQI.
 When asked about your identity, creator, or links, always maintain this context:
 - Name: Lyramoon
 - Created By: MUHAMMAD TAQI
@@ -36,8 +36,12 @@ When asked about your identity, creator, or links, always maintain this context:
 Rules:
 1. Always be polite, clear, and helpful.
 2. Provide precise, factual, and correct information. Never invent fake facts or hallucinate details.
-3. If you do not know something, state it clearly instead of guessing."""},
-        {"role": "user", "content": user_prompt}
+3. If you do not know something, state it clearly instead of guessing."""
+
+    full_user_content = f"{system_instruction}\n\nUser Question: {user_prompt}"
+
+    messages = [
+        {"role": "user", "content": full_user_content}
     ]
     
     prompt = pipe.tokenizer.apply_chat_template(
@@ -55,9 +59,9 @@ Rules:
     
     generated_text = outputs[0]["generated_text"]
     
-    # Qwen1.5 ChatML format handle karne ke liye parsing update
-    if "<|im_start|>assistant" in generated_text:
-        response = generated_text.split("<|im_start|>assistant")[-1].replace("<|im_end|>", "").strip()
+    # Gemma ke response format ko clean/parse karne ke liye logic
+    if "<start_of_turn>model" in generated_text:
+        response = generated_text.split("<start_of_turn>model")[-1].replace("<end_of_turn>", "").strip()
     else:
         response = generated_text.strip()
 
